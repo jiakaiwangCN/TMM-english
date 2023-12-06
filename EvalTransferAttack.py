@@ -14,14 +14,16 @@ from torch.utils.data import DataLoader
 
 from models.tokenization_bert import BertTokenizer
 import utils
+from models.model_retrieval import ALBEF
 from attack import *
 from torchvision import transforms
 from dataset import pair_dataset_attack
 from PIL import Image
 from torchvision import transforms
 from tqdm import tqdm
+from transformers import BertForMaskedLM
 
-class EvaluationHandler:
+class Evaluation:
     def __init__(self, model, ref_model, data_loader, tokenizer, device, config):
         self.model = model
         self.ref_model = ref_model
@@ -148,11 +150,11 @@ def main(args, config):
 
     tokenizer = BertTokenizer.from_pretrained(args.text_encoder)
 
-    model_handler = ModelHandler(config, args.text_encoder, tokenizer)
+    model_handler = Model(config, args.text_encoder, tokenizer)
     model_handler.load_checkpoint(args.checkpoint)
     model_handler.to_device(device)
 
-    eval_handler = EvaluationHandler(model_handler.model, model_handler.ref_model, test_loader, tokenizer, device, config)
+    eval_handler = Evaluation(model_handler.model, model_handler.ref_model, test_loader, tokenizer, device, config)
     score_i2t, score_t2i = eval_handler.retrieval_eval()
     result = eval_handler.itm_eval(score_i2t, score_t2i, test_dataset.img2txt, test_dataset.txt2img)
     print(result)
