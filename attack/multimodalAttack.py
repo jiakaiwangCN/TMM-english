@@ -58,15 +58,21 @@ class MultiModalAttacker():
             image_diversity = next(image_attack)
             adv = [image_diversity[i].repeat(5, 1, 1, 1) for i in range(image_diversity.shape[0])]
             adv = torch.cat(adv, dim=0)
+            _, _, _, _, text_adv_input, text_adv = self.get_origin_and_adv_embeds(adv, text, device, max_length)
             adv_output = self.net.inference(adv, text_adv_input, use_embeds=False)
             vdt = self.net.inference(adv, text_input, use_embeds=False)
+            text_adv_output = self.net.inference(self.image_normalize(images).repeat(self.repeat, 1, 1, 1),
+                                                    text_adv_input, use_embeds=False)
 
             if args.cls:
                 adv_embed = adv_output['fusion_output'][:, 0, :]
                 vdt_embed = vdt['fusion_output'][:, 0, :]
+                text_adv_embed = text_adv_output['fusion_output'][:, 0, :].detach()
             else:
                 adv_embed = adv_output['fusion_output'].flatten(1)
                 vdt_embed = vdt['fusion_output'].flatten(1)
+                text_adv_embed = text_adv_output['fusion_output'].flatten(1).detach()
+                
             y = torch.ones(adv_embed.shape[0]).to(device)
             cos_ao_loss_nosoft = loss_fn(adv_embed, origin_embeds, y)
             cos_ot_nosoft = loss_fn(origin_embeds, text_adv_embed, y)
@@ -78,5 +84,6 @@ class MultiModalAttacker():
         images_adv = next(image_attack)
         images_adv = [images_adv[i].repeat(5, 1, 1, 1) for i in range(images_adv.shape[0])]
         images_adv = torch.cat(images_adv, dim=0)
+        _, _, _, _, _, text_adv = self.get_origin_and_adv_embeds(adv, text, device, max_length)
 
         return images_adv, text_adv
